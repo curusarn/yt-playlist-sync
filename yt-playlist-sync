@@ -1,0 +1,61 @@
+#!/bin/bash
+
+#PERSONAL DEFAULTS
+plUrl="https://www.youtube.com/playlist?list=PLOoJ3WlgcZEyUhfpaLKzngtxOh2aV__ye"
+plPath=/home/salamon/down/music/watchLaterHistory-sync
+youParsePath="youParse/youParse.py"
+
+
+#lockFile="$plPath/meta-LOCK"
+localUrls="$plPath/.urls"
+remoteUrls="$plPath/.urls-remote"
+diffUrls="$plPath/.urls-diff"
+
+
+
+
+#if [[ -f "$lockFile" ]]; then
+#    echo "There can be only one (running instance)"
+#    exit 1
+#fi
+#
+#touch "$lockFile" 
+
+if [[ ! -f "$localUrls" ]]; then
+    touch "$localUrls"
+fi
+
+python3 "$youParsePath" "$plUrl" | sort > "$remoteUrls"
+
+tmpFile=`mktemp /tmp/yt-playlist-sync-XXX.tmp`
+cat "$localUrls" | sort > "$tmpFile"
+cat "$tmpFile" > "$localUrls"
+rm "$tmpFile"
+
+comm -13 "$localUrls" "$remoteUrls" > "$diffUrls"
+
+cnt=0
+while read u; do
+    echo "Downloading $u"
+    if youtube-dl --audio-format mp3 -x -o "$plPath/%(title)s.%(ext)s" "$u"
+    then
+        echo "Success!"
+        echo "$u" >> "$localUrls"
+        cnt=$(($cnt+1))
+        # delete all webm files from previous runs after first success
+        # keeps progress between two conscutive runs
+        rm "$plPath"/*.webm 2>/dev/null 
+    else
+        echo "Fail!"
+        sleep 1
+    fi
+done < "$diffUrls"
+
+if [[ "$cnt" -gt "0" ]]; then
+    echo "Downloaded $cnt out of `cat $diffUrls | wc -l` new songs!"
+else
+    echo "No new songs"
+fi
+
+#rm "$plPath/meta-LOCK"
+
