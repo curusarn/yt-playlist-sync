@@ -1,31 +1,52 @@
 #!/bin/bash
 
+
+function err {
+    echo "ERROR: $@"
+}
+
+function help {
+    echo "Usage:"
+    echo "    yt-playlist-sync PLAYLIST_PATH PLAYLIST_URL"
+}
+
+
 #PERSONAL DEFAULTS
 plUrl="https://www.youtube.com/playlist?list=PLOoJ3WlgcZEyUhfpaLKzngtxOh2aV__ye"
 plPath=/home/salamon/down/music/watchLaterHistory-sync
 youParsePath="youParse/youParse.py"
 
+if [[ $1 == "" || $2 == "" ]]; then
+    err "Expecting 2 arguments"
+    help
+    exit 1
+fi
 
-#lockFile="$plPath/meta-LOCK"
+plPath="$1"
+plUrl="$2"
+
+if [[ ! -d "$plPath" ]]; then
+    err "Directory does not exist - $plPath"
+    help
+    exit 2
+fi
+
+
 localUrls="$plPath/.urls"
 remoteUrls="$plPath/.urls-remote"
 diffUrls="$plPath/.urls-diff"
 
 
-
-
-#if [[ -f "$lockFile" ]]; then
-#    echo "There can be only one (running instance)"
-#    exit 1
-#fi
-#
-#touch "$lockFile" 
-
 if [[ ! -f "$localUrls" ]]; then
     touch "$localUrls"
 fi
 
-python3 "$youParsePath" "$plUrl" | sort > "$remoteUrls"
+if ! python3 "$youParsePath" "$plUrl" | sort > "$remoteUrls"; then
+    err "Youtube playlist url is not vaild - $plUrl"
+    help
+    exit 3
+fi
+    
 
 tmpFile=`mktemp /tmp/yt-playlist-sync-XXX.tmp`
 cat "$localUrls" | sort > "$tmpFile"
@@ -33,6 +54,8 @@ cat "$tmpFile" > "$localUrls"
 rm "$tmpFile"
 
 comm -13 "$localUrls" "$remoteUrls" > "$diffUrls"
+
+echo "Downloading `cat $diffUrls | wc -l` new songs!"
 
 cnt=0
 while read u; do
@@ -47,15 +70,11 @@ while read u; do
         rm "$plPath"/*.webm 2>/dev/null 
     else
         echo "Fail!"
+        # let's you kill program with double Ctrl-C
         sleep 1
     fi
 done < "$diffUrls"
 
-if [[ "$cnt" -gt "0" ]]; then
-    echo "Downloaded $cnt out of `cat $diffUrls | wc -l` new songs!"
-else
-    echo "No new songs"
-fi
+echo "Downloaded $cnt out of `cat $diffUrls | wc -l` new songs!"
 
-#rm "$plPath/meta-LOCK"
 
