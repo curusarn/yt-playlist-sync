@@ -20,11 +20,13 @@ function help
 
 #KEY VARIABLES
 youParsePath="youParse/youParse.py"
+
+plPath="$1"
+plUrl="$2"
+
 localUrls="$plPath/.urls"
 remoteUrls="$plPath/.urls-remote"
 diffUrls="$plPath/.urls-diff"
-plPath="$1"
-plUrl="$2"
 
 #INPUT VERIFICATION
 [[ "$#" -ne 2 ]] && err "Expecting 2 arguments" "help" 1
