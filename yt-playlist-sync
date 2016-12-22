@@ -19,6 +19,7 @@ function help
 }
 
 #KEY VARIABLES
+ytDlTimeout=60
 youParsePath="youParse/youParse.py"
 
 plPath="$1"
@@ -27,6 +28,7 @@ plUrl="$2"
 localUrls="$plPath/.urls"
 remoteUrls="$plPath/.urls-remote"
 diffUrls="$plPath/.urls-diff"
+backupUrls="$plPath/.urls.bak"
 
 #INPUT VERIFICATION
 [[ "$#" -lt 2 ]] && err "Expecting at least 2 arguments" "help" 1
@@ -41,6 +43,9 @@ then
 fi
 
 #CORE
+if ! diff "$localUrls" "$backupUrls" -q; then
+    cat "$localUrls" "$backupUrls" | sort -u >> tee "/dev/null" "$localUrls" "$backupUrls" >/dev/null
+fi
 cat "$localUrls" | sort | tee "/dev/null" "$localUrls" >/dev/null
 comm -13 "$localUrls" "$remoteUrls" > "$diffUrls"
 printf "Downloading `cat $diffUrls | wc -l` new songs!\n"
@@ -50,10 +55,11 @@ while read u; do
     printf "Downloading %s\n" "$u"
     devnull=">/dev/null 2>/dev/null"
     [[ "$3" != "-v" ]] && devnull=""
-    if timeout 120 youtube-dl --audio-format mp3 -x -o "$plPath/%(title)s.%(ext)s" "$u" $devnull
+    if timeout "$ytDlTimeout" youtube-dl --audio-format mp3 -x -o "$plPath/%(title)s.%(ext)s" "$u" $devnull
     then
         echo "Success!"
         printf "$u\n" >> "$localUrls"
+        cp "$localUrls" "$backupUrls" 
         cnt=$(($cnt+1))
         # delete all webm files from previous runs after first success
         # keeps progress between two conscutive runs
