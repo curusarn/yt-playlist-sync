@@ -15,7 +15,7 @@ function err
 
 function help 
 {
-    printf "$0 [USAGE]: yt-playlist-sync PLAYLIST_PATH PLAYLIST_URL\n"
+    printf "$0 [USAGE]: yt-playlist-sync PLAYLIST_PATH PLAYLIST_URL [-v]\n"
 }
 
 #KEY VARIABLES
@@ -29,7 +29,7 @@ remoteUrls="$plPath/.urls-remote"
 diffUrls="$plPath/.urls-diff"
 
 #INPUT VERIFICATION
-[[ "$#" -ne 2 ]] && err "Expecting 2 arguments" "help" 1
+[[ "$#" -lt 2 ]] && err "Expecting at least 2 arguments" "help" 1
 
 [[ ! -d "$plPath" ]] && err "Directory does not exist - $plPath" "help" 2
 
@@ -41,14 +41,16 @@ then
 fi
 
 #CORE
-cat "$localUrls" | sort | tee "/dev/null" "$localUrls"
+cat "$localUrls" | sort | tee "/dev/null" "$localUrls" >/dev/null
 comm -13 "$localUrls" "$remoteUrls" > "$diffUrls"
 printf "Downloading `cat $diffUrls | wc -l` new songs!\n"
 
 cnt=0
 while read u; do
     printf "Downloading %s\n" "$u"
-    if youtube-dl --audio-format mp3 -x -o "$plPath/%(title)s.%(ext)s" "$u"
+    devnull=">/dev/null 2>/dev/null"
+    [[ "$3" != "-v" ]] && devnull=""
+    if timeout 120 youtube-dl --audio-format mp3 -x -o "$plPath/%(title)s.%(ext)s" "$u" $devnull
     then
         echo "Success!"
         printf "$u\n" >> "$localUrls"
