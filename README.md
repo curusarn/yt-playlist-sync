@@ -1,3 +1,5 @@
+**PROJECT IS IN EARLY STAGE OF DEVELOPMENT AND UNDERGOES MANY CHANGES**
+
 # yt-playlist-sync
 Youtube playlist one-way synchronizer/downloader
 
